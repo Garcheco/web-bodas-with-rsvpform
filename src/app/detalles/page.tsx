@@ -12,46 +12,28 @@ export default function DetallesPage() {
           id="detalles"
           titleEs="Detalles del evento"
           titleEn="Event details"
-          subtitleEs="Información sobre la ceremonia y la recepción."
-          subtitleEn="Information about the ceremony and reception."
+          subtitleEs="Información sobre la recepción."
+          subtitleEn="Information about the reception."
           variant="alt"
         >
-          <div className="grid md:grid-cols-2 gap-10">
+          <div className="mx-auto max-w-3xl">
             <MapEmbed
-              titleEs="Ceremonia"
-              titleEn="Ceremony"
-              addressEs="Parroquia de Mazatlán, Centro, Mazatlán, Sinaloa"
-              addressEn="Mazatlán Parish, Centro, Mazatlán, Sinaloa"
-              embedUrl="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3696.5!2d-106.42!3d23.25!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0:0x0!2zMjPCsDE1JzAwLjAiTiAxMDbCsDI1JzEyLjAiVw!5e0!3m1!1s0x0:0x0!2m3!1f0!2f0!3f0"
-              lang="es"
-            />
-            <MapEmbed
-              titleEs="Recepción"
-              titleEn="Reception"
-              addressEs="Salón de eventos, Zona Dorada, Mazatlán, Sinaloa"
-              addressEn="Event hall, Golden Zone, Mazatlán, Sinaloa"
-              embedUrl="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3696.5!2d-106.42!3d23.25!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0:0x0!2zMjPCsDE1JzAwLjAiTiAxMDbCsDI1JzEyLjAiVw!5e0!3m1!1s0x0:0x0!2m3!1f0!2f0!3f0"
+              titleEs="Ubicación del evento"
+              titleEn="Event location"
+              addressEs="DoubleTree By Hilton, Av Camarón Sábalo 905, Zona Costera, Mazatlán, Sinaloa"
+              addressEn="DoubleTree By Hilton, 905 Camarón Sábalo Avenue, Mazatlán, Sinaloa"
+              embedUrl="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1559.136489624192!2d-106.4582081726065!3d23.25475121193651!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x869f54b1527cb4d7%3A0x16e2559552702624!2sDoubleTree%20By%20Hilton%20Mazatl%C3%A1n!5e0!3m2!1ses-419!2smx!4v1788154474418!5m2!1ses-419!2smx"
               lang="es"
             />
           </div>
 
-          <div className="mt-12 grid md:grid-cols-2 gap-8 text-center md:text-left">
-            <div>
-              <h4 className="text-lg font-serif font-semibold text-[var(--foreground)]">
-                Hora de la ceremonia
-              </h4>
-              <p className="mt-1 text-[var(--foreground-muted)]">
-                Sábado 10 de abril de 2027 — 17:00 hrs
-              </p>
-            </div>
-            <div>
-              <h4 className="text-lg font-serif font-semibold text-[var(--foreground)]">
-                Hora de la recepción
-              </h4>
-              <p className="mt-1 text-[var(--foreground-muted)]">
-                Sábado 10 de abril de 2027 — 19:00 hrs
-              </p>
-            </div>
+          <div className="mt-12 text-center">
+            <h4 className="text-lg font-serif font-semibold text-[var(--foreground)]">
+              Hora de la recepción
+            </h4>
+            <p className="mt-1 text-[var(--foreground-muted)]">
+              Sábado 10 de abril de 2027 — 19:00 hrs
+            </p>
           </div>
 
           <div className="mt-10 text-center">

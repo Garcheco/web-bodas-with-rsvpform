@@ -60,7 +60,7 @@ export default function Header() {
             href="/"
             className="text-xl font-serif font-semibold tracking-wide text-[var(--foreground)]"
           >
-            Boda Edgard
+            Nuestra Boda C&E
           </Link>
 
           {/* Desktop nav */}
@@ -135,7 +135,7 @@ export default function Header() {
               href="/rsvp"
               className="ml-2 px-4 py-2 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-dark)] transition"
             >
-              {lang === "es" ? "Confirmar" : "RSVP"}
+              {lang === "es" ? "Confirmar asistencia" : "RSVP"}
             </Link>
             <button
               onClick={toggleLang}
