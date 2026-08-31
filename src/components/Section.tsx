@@ -6,7 +6,7 @@ type SectionProps = {
   titleEn: string;
   subtitleEs?: string;
   subtitleEn?: string;
-  children: ReactNode;
+  children?: ReactNode;
   variant?: "default" | "alt";
 };
 
@@ -39,7 +39,7 @@ export default function Section({
           </p>
         )}
 
-        <div className="mt-10">{children}</div>
+        {children && <div className="mt-10">{children}</div>}
       </div>
     </section>
   );

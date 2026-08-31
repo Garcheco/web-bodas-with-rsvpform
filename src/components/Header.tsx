@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useState } from "react";
 
-const navItems = [
+type NavItem =
+  | { href: string; labelEs: string; labelEn: string }
+  | {
+      labelEs: string;
+      labelEn: string;
+      children: { href: string; labelEs: string; labelEn: string }[];
+    };
+
+const navItems: NavItem[] = [
   { href: "/", labelEs: "Inicio", labelEn: "Home" },
   { href: "/historia", labelEs: "Historia", labelEn: "Story" },
   { href: "/detalles", labelEs: "Detalles", labelEn: "Details" },
@@ -42,7 +50,7 @@ export default function Header() {
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-6">
             {navItems.map((item) => {
-              if ("children" in item) {
+              if ("children" in item && item.children) {
                 return (
                   <div
                     key={item.labelEs}
@@ -50,16 +58,15 @@ export default function Header() {
                     onMouseEnter={() => setGalleryOpen(true)}
                     onMouseLeave={() => setGalleryOpen(false)}
                   >
-                    {/* Botón + Área invisible hacia el dropdown */}
                     <div className="flex items-center gap-1">
                       <button
-                        className="text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition flex items-center gap-1 py-2"
+                        className="flex items-center gap-1 py-2 text-sm text-[var(--foreground-muted)] transition hover:text-[var(--foreground)]"
                         aria-haspopup="true"
                         aria-expanded={galleryOpen}
                       >
                         {lang === "es" ? item.labelEs : item.labelEn}
                         <svg
-                          className="w-4 h-4"
+                          className="h-4 w-4"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -74,17 +81,15 @@ export default function Header() {
                       </button>
                     </div>
 
-                    {/* Dropdown */}
                     {galleryOpen && (
                       <>
-                        {/* Puente invisible para que no se cierre al bajar */}
                         <div className="absolute left-0 top-full h-2 w-full" />
-                        <div className="absolute left-0 mt-2 w-40 rounded-md bg-white shadow-lg border border-[var(--background-alt)] overflow-hidden z-50">
+                        <div className="absolute left-0 z-50 mt-2 w-40 overflow-hidden rounded-md border border-[var(--background-alt)] bg-white shadow-lg">
                           {item.children.map((child) => (
                             <Link
                               key={child.href}
                               href={child.href}
-                              className="block px-4 py-2 text-sm text-[var(--foreground-muted)] hover:bg-[var(--background-alt)] hover:text-[var(--foreground)] transition"
+                              className="block px-4 py-2 text-sm text-[var(--foreground-muted)] transition hover:bg-[var(--background-alt)] hover:text-[var(--foreground)]"
                             >
                               {lang === "es" ? child.labelEs : child.labelEn}
                             </Link>
@@ -100,21 +105,22 @@ export default function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition"
+                  className="text-sm text-[var(--foreground-muted)] transition hover:text-[var(--foreground)]"
                 >
                   {lang === "es" ? item.labelEs : item.labelEn}
                 </Link>
               );
             })}
+
             <Link
               href="/rsvp"
-              className="ml-2 px-4 py-2 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-dark)] transition"
+              className="ml-2 rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--accent-dark)]"
             >
               {lang === "es" ? "Confirmar" : "RSVP"}
             </Link>
             <button
               onClick={toggleLang}
-              className="text-xs px-2 py-1 rounded border border-[var(--background-alt)] text-[var(--foreground-muted)] hover:border-[var(--accent)] hover:text-[var(--foreground)] transition"
+              className="rounded border border-[var(--background-alt)] px-2 py-1 text-xs text-[var(--foreground-muted)] transition hover:border-[var(--accent)] hover:text-[var(--foreground)]"
               aria-label="Switch language"
             >
               {lang === "es" ? "EN" : "ES"}
@@ -122,16 +128,16 @@ export default function Header() {
           </nav>
 
           {/* Mobile menu button */}
-          <div className="md:hidden flex items-center gap-3">
+          <div className="flex items-center gap-3 md:hidden">
             <Link
               href="/rsvp"
-              className="px-3 py-1.5 rounded-full bg-[var(--accent)] text-white text-xs font-medium hover:bg-[var(--accent-dark)] transition"
+              className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[var(--accent-dark)]"
             >
               {lang === "es" ? "Confirmar" : "RSVP"}
             </Link>
             <button
               onClick={toggleLang}
-              className="text-xs px-2 py-1 rounded border border-[var(--background-alt)] text-[var(--foreground-muted)] hover:border-[var(--accent)] hover:text-[var(--foreground)] transition"
+              className="rounded border border-[var(--background-alt)] px-2 py-1 text-xs text-[var(--foreground-muted)] transition hover:border-[var(--accent)] hover:text-[var(--foreground)]"
               aria-label="Switch language"
             >
               {lang === "es" ? "EN" : "ES"}
@@ -142,7 +148,7 @@ export default function Header() {
               aria-label="Toggle menu"
             >
               <svg
-                className="w-6 h-6"
+                className="h-6 w-6"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -169,12 +175,15 @@ export default function Header() {
 
         {/* Mobile nav */}
         {open && (
-          <nav className="md:hidden pb-4 flex flex-col gap-2">
+          <nav className="flex flex-col gap-2 pb-4 md:hidden">
             {navItems.map((item) => {
-              if ("children" in item) {
+              if ("children" in item && item.children) {
                 return (
-                  <div key={item.labelEs} className="pl-2 border-l border-[var(--background-alt)]">
-                    <p className="text-sm font-medium text-[var(--foreground)] mb-1">
+                  <div
+                    key={item.labelEs}
+                    className="border-l border-[var(--background-alt)] pl-2"
+                  >
+                    <p className="mb-1 text-sm font-medium text-[var(--foreground)]">
                       {lang === "es" ? item.labelEs : item.labelEn}
                     </p>
                     <div className="flex flex-col gap-1">
@@ -183,7 +192,7 @@ export default function Header() {
                           key={child.href}
                           href={child.href}
                           onClick={() => setOpen(false)}
-                          className="text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition py-1"
+                          className="py-1 text-sm text-[var(--foreground-muted)] transition hover:text-[var(--foreground)]"
                         >
                           {lang === "es" ? child.labelEs : child.labelEn}
                         </Link>
@@ -198,7 +207,7 @@ export default function Header() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className="text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition py-1"
+                  className="py-1 text-sm text-[var(--foreground-muted)] transition hover:text-[var(--foreground)]"
                 >
                   {lang === "es" ? item.labelEs : item.labelEn}
                 </Link>
