@@ -3,13 +3,23 @@
 import Link from "next/link";
 import { useState } from "react";
 
-type NavItem =
-  | { href: string; labelEs: string; labelEn: string }
-  | {
-      labelEs: string;
-      labelEn: string;
-      children: { href: string; labelEs: string; labelEn: string }[];
-    };
+type NavItemWithLink = {
+  href: string;
+  labelEs: string;
+  labelEn: string;
+};
+
+type NavItemWithChildren = {
+  labelEs: string;
+  labelEn: string;
+  children: {
+    href: string;
+    labelEs: string;
+    labelEn: string;
+  }[];
+};
+
+type NavItem = NavItemWithLink | NavItemWithChildren;
 
 const navItems: NavItem[] = [
   { href: "/", labelEs: "Inicio", labelEn: "Home" },
@@ -29,6 +39,12 @@ const navItems: NavItem[] = [
   { href: "/contacto", labelEs: "Contacto", labelEn: "Contact" },
 ];
 
+function isNavItemWithChildren(
+  item: NavItem
+): item is NavItemWithChildren {
+  return "children" in item;
+}
+
 export default function Header() {
   const [lang, setLang] = useState<"es" | "en">("es");
   const [open, setOpen] = useState(false);
@@ -44,13 +60,13 @@ export default function Header() {
             href="/"
             className="text-xl font-serif font-semibold tracking-wide text-[var(--foreground)]"
           >
-            Boda Cecilia & Edgard
+            Boda Edgard
           </Link>
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-6">
             {navItems.map((item) => {
-              if ("children" in item && item.children) {
+              if (isNavItemWithChildren(item)) {
                 return (
                   <div
                     key={item.labelEs}
@@ -58,15 +74,16 @@ export default function Header() {
                     onMouseEnter={() => setGalleryOpen(true)}
                     onMouseLeave={() => setGalleryOpen(false)}
                   >
+                    {/* Botón + Área invisible hacia el dropdown */}
                     <div className="flex items-center gap-1">
                       <button
-                        className="flex items-center gap-1 py-2 text-sm text-[var(--foreground-muted)] transition hover:text-[var(--foreground)]"
+                        className="text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition flex items-center gap-1 py-2"
                         aria-haspopup="true"
                         aria-expanded={galleryOpen}
                       >
                         {lang === "es" ? item.labelEs : item.labelEn}
                         <svg
-                          className="h-4 w-4"
+                          className="w-4 h-4"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -81,15 +98,17 @@ export default function Header() {
                       </button>
                     </div>
 
+                    {/* Dropdown */}
                     {galleryOpen && (
                       <>
+                        {/* Puente invisible para que no se cierre al bajar */}
                         <div className="absolute left-0 top-full h-2 w-full" />
-                        <div className="absolute left-0 z-50 mt-2 w-40 overflow-hidden rounded-md border border-[var(--background-alt)] bg-white shadow-lg">
+                        <div className="absolute left-0 mt-2 w-40 rounded-md bg-white shadow-lg border border-[var(--background-alt)] overflow-hidden z-50">
                           {item.children.map((child) => (
                             <Link
                               key={child.href}
                               href={child.href}
-                              className="block px-4 py-2 text-sm text-[var(--foreground-muted)] transition hover:bg-[var(--background-alt)] hover:text-[var(--foreground)]"
+                              className="block px-4 py-2 text-sm text-[var(--foreground-muted)] hover:bg-[var(--background-alt)] hover:text-[var(--foreground)] transition"
                             >
                               {lang === "es" ? child.labelEs : child.labelEn}
                             </Link>
@@ -101,26 +120,26 @@ export default function Header() {
                 );
               }
 
+              // Aquí TypeScript ya sabe que es NavItemWithLink
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="text-sm text-[var(--foreground-muted)] transition hover:text-[var(--foreground)]"
+                  className="text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition"
                 >
                   {lang === "es" ? item.labelEs : item.labelEn}
                 </Link>
               );
             })}
-
             <Link
               href="/rsvp"
-              className="ml-2 rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--accent-dark)]"
+              className="ml-2 px-4 py-2 rounded-full bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent-dark)] transition"
             >
               {lang === "es" ? "Confirmar" : "RSVP"}
             </Link>
             <button
               onClick={toggleLang}
-              className="rounded border border-[var(--background-alt)] px-2 py-1 text-xs text-[var(--foreground-muted)] transition hover:border-[var(--accent)] hover:text-[var(--foreground)]"
+              className="text-xs px-2 py-1 rounded border border-[var(--background-alt)] text-[var(--foreground-muted)] hover:border-[var(--accent)] hover:text-[var(--foreground)] transition"
               aria-label="Switch language"
             >
               {lang === "es" ? "EN" : "ES"}
@@ -128,16 +147,16 @@ export default function Header() {
           </nav>
 
           {/* Mobile menu button */}
-          <div className="flex items-center gap-3 md:hidden">
+          <div className="md:hidden flex items-center gap-3">
             <Link
               href="/rsvp"
-              className="rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[var(--accent-dark)]"
+              className="px-3 py-1.5 rounded-full bg-[var(--accent)] text-white text-xs font-medium hover:bg-[var(--accent-dark)] transition"
             >
               {lang === "es" ? "Confirmar" : "RSVP"}
             </Link>
             <button
               onClick={toggleLang}
-              className="rounded border border-[var(--background-alt)] px-2 py-1 text-xs text-[var(--foreground-muted)] transition hover:border-[var(--accent)] hover:text-[var(--foreground)]"
+              className="text-xs px-2 py-1 rounded border border-[var(--background-alt)] text-[var(--foreground-muted)] hover:border-[var(--accent)] hover:text-[var(--foreground)] transition"
               aria-label="Switch language"
             >
               {lang === "es" ? "EN" : "ES"}
@@ -148,7 +167,7 @@ export default function Header() {
               aria-label="Toggle menu"
             >
               <svg
-                className="h-6 w-6"
+                className="w-6 h-6"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -175,15 +194,15 @@ export default function Header() {
 
         {/* Mobile nav */}
         {open && (
-          <nav className="flex flex-col gap-2 pb-4 md:hidden">
+          <nav className="md:hidden pb-4 flex flex-col gap-2">
             {navItems.map((item) => {
-              if ("children" in item && item.children) {
+              if (isNavItemWithChildren(item)) {
                 return (
                   <div
                     key={item.labelEs}
-                    className="border-l border-[var(--background-alt)] pl-2"
+                    className="pl-2 border-l border-[var(--background-alt)]"
                   >
-                    <p className="mb-1 text-sm font-medium text-[var(--foreground)]">
+                    <p className="text-sm font-medium text-[var(--foreground)] mb-1">
                       {lang === "es" ? item.labelEs : item.labelEn}
                     </p>
                     <div className="flex flex-col gap-1">
@@ -192,7 +211,7 @@ export default function Header() {
                           key={child.href}
                           href={child.href}
                           onClick={() => setOpen(false)}
-                          className="py-1 text-sm text-[var(--foreground-muted)] transition hover:text-[var(--foreground)]"
+                          className="text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition py-1"
                         >
                           {lang === "es" ? child.labelEs : child.labelEn}
                         </Link>
@@ -207,7 +226,7 @@ export default function Header() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className="py-1 text-sm text-[var(--foreground-muted)] transition hover:text-[var(--foreground)]"
+                  className="text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition py-1"
                 >
                   {lang === "es" ? item.labelEs : item.labelEn}
                 </Link>
