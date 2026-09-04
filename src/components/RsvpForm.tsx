@@ -102,25 +102,7 @@ export default function RsvpForm() {
         {lang === "es" ? text.descriptionEs : text.descriptionEn}
       </p>
 
-      <form
-        action="https://formsubmit.co/sevcho11@gmail.com"
-        method="POST"
-        className="space-y-4"
-      >
-        <input
-          type="hidden"
-          name="_subject"
-          value="Nueva confirmación RSVP - Boda C&E"
-        />
-
-        <input
-          type="hidden"
-          name="_next"
-          value="https://boda-edgard.vercel.app/rsvp/gracias"
-        />
-
-        <input type="hidden" name="_captcha" value="false" />
-
+      <form action="/api/rsvp" method="POST" className="space-y-4">
         <div>
           <label
             htmlFor="nombre"
