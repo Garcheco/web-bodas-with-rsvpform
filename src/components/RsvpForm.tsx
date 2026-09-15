@@ -14,6 +14,18 @@ type FormData = {
 
 export default function RsvpForm() {
   const [lang, setLang] = useState<"es" | "en">("es");
+  const email = process.env.NEXT_PUBLIC_FORMSUBMIT_EMAIL;
+  const ccEmail = process.env.NEXT_PUBLIC_FORMSUBMIT_CC_EMAIL;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  // Validación opcional (puedes quitarla en producción si ya estás seguro)
+  if (!email || !ccEmail || !siteUrl) {
+    return (
+      <div className="text-center text-red-600">
+        Error: Configuración de email no disponible.
+      </div>
+    );
+  }
 
   const [formData, setFormData] = useState<FormData>({
     nombre: "",
@@ -103,7 +115,7 @@ export default function RsvpForm() {
       </p>
 
       <form
-        action="https://formsubmit.co/sevcho11@gmail.com"
+        action={`https://formsubmit.co/${email}`}
         method="POST"
         className="space-y-4"
       >
@@ -116,10 +128,11 @@ export default function RsvpForm() {
         <input
           type="hidden"
           name="_next"
-          value="https://boda-edgard.vercel.app/rsvp/gracias"
+          value={`${process.env.NEXT_PUBLIC_SITE_URL}/rsvp/gracias`}
         />
 
         <input type="hidden" name="_captcha" value="false" />
+        <input type="hidden" name="_cc" value={ccEmail} />
 
         <div>
           <label
