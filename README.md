@@ -1,3 +1,7 @@
+# Proyecto-Web Edgard
+
+Para retomar el trabajo en VS Code, leer [el contexto, las decisiones y el plan de sesiones](docs/CONTEXTO_PROYECTO.md).
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
