@@ -1,12 +1,409 @@
-# Codex Handoff --- web-bodas-with-rsvpform
+# CODEX_HANDOFF — web-bodas-with-rsvpform
 
-> Estado de transferencia preparado desde una sesión previa de ChatGPT.
->
-> **Importante para el siguiente agente:** este documento describe
-> decisiones y trabajo realizado durante la sesión, pero el repositorio
-> es la fuente definitiva del estado actual. Antes de modificar
-> archivos, inspecciona el repo, confirma la branch y compara el
-> contenido real de las migraciones con este handoff.
+Actualizado: **11 de octubre de 2026**, zona de la sesión America/Mexico_City.
+Repositorio: **Garcheco/web-bodas-with-rsvpform**. Rama de continuidad: **dev**.
+Conversación fuente: **Tips web boda**, ID `6abdd1f1-d1b8-83e8-8b2a-38aad7adcdbd`.
+Referencia: chatgpt-conversation://6abdd1f1-d1b8-83e8-8b2a-38aad7adcdbd
+
+## 0. Leer primero: punto exacto de continuidad
+
+**La etapa de seguridad y seed local fue reportada como exitosa por el usuario. El siguiente trabajo técnico acordado es la lectura segura de invitaciones mediante token en Next.js. Todavía no se ha implementado en GitHub dev. Antes hay que reconciliar la copia local con GitHub: faltan archivos locales recientes en la rama publicada.**
+
+Este documento transfiere el contexto técnico disponible; no promete una transcripción ilimitada de chats anteriores ni memoria automática. Se leyó la conversación referenciada mediante read_thread: devolvió cinco turnos, sin cursor adicional ni adjuntos. Se integraron también el handoff anterior completo, el contexto del proyecto y archivos reales. El texto de un asistente que propone una tarea no acredita ejecución. No inferir contenido de adjuntos inexistentes.
+
+### Fuentes y niveles de evidencia
+
+- **Verificado en GitHub:** contenido leído en dev el 11 de octubre; commit base `7e6ff067a68d0010b3daf56f157e7a19043f834d`; árbol real `044d87930e11173729cec27486d32a716d0a9320`. Lectura de archivos y árbol recursivo, no ejecución de la app.
+- **Reportado por el usuario:** resultados locales pegados en Tips web boda, estructura local y confirmación «Todo ha funcionado correctamente».
+- **Histórico:** contexto del 1 de octubre y handoff anterior. Se preservan decisiones, pero sus comprobaciones no son comprobaciones nuevas.
+- **Plan:** endpoints, escritura transaccional, integración visual, Sheets y dashboard. No marcar como implementado.
+- **No comprobado en esta transferencia:** estado actual de Docker, base local, Supabase Cloud, despliegue, lint/build, secretos, árbol de trabajo local o git status.
+
+La única modificación autorizada y realizada en esta transferencia es **CODEX_HANDOFF.md en dev**, más una copia descargable del mismo contenido. No se cambiaron código, migraciones, configuración ni bases de datos.
+
+### Matriz de estado y diferencias que NO deben perderse
+
+| Elemento | GitHub dev inspeccionado | Evidencia local / conversación | Consecuencia |
+| --- | --- | --- | --- |
+| `20261002023537_initial_schema.sql` | Existe; blob `105edf54d6284795c5a73ae9e7f3739654c61076` | Figura aplicada en migration list --local | Archivo verificado; aplicación local solo reportada |
+| `20261011092114_harden_default_privileges.sql` | No aparece en árbol; fetch 404 | Usuario compartió SQL, ruta local y aplicación en historial | Recuperar/comparar copia local; no afirmar que está publicada |
+| `supabase/seed.sql` | Ausente; fetch 404 | Figura en estructura local; usuario confirmó éxito tras instrucciones de reset/consulta | Seed local reportado exitoso; filas actuales no consultadas |
+| `supabase/snippets/verify_default_privileges.sql` | Ausente | SQL de prueba y resultado explícitos en chat; figura en estructura | Conservar evidencia; revisar archivo local antes de versionarlo |
+| `ESTRUCTURA.md` | Ausente; fetch 404 | Figura en estructura del usuario | No se pudo leer contenido; no se creó en esta transferencia |
+| `Untitled query 414.sql` | Ausente | Figura local; contenido no disponible | No atribuirle SQL inventado |
+| `Untitled query 499.sql` | Existe | Verificado: enumera tablas public/private | No equivale a prueba de permisos o datos |
+| RLS | Initial_schema habilita cinco tablas public y jobs private | Diez filas reales reportadas: RLS true, permisos false para anon/authenticated | Prueba local de cinco tablas; private no incluido en esa salida |
+| Advisors | No hay ejecución nueva | `Connecting to local database... No issues found` | Resultado local histórico, no auditoría global ni remota |
+| Triggers updated_at | Helper private y cuatro triggers presentes | No se aportó prueba funcional separada | Definición verificada; funcionamiento pendiente de evidencia |
+| Backend token | Sin rutas nuevas ni cliente en árbol GitHub | Acordado como siguiente etapa | Pendiente |
+| SDK Supabase | No declarado en package.json | Se propuso comprobar e instalar | No asumir instalación local |
+| Storage unhealthy | Bloqueo del handoff anterior | Después hubo list/advisors y confirmación de éxito | Incidente histórico superado según continuidad; causa exacta no documentada |
+
+**No reiniciar el diagnóstico de Storage como primer paso por leer el handoff viejo.** Solo retomarlo si el estado actual reproduce el fallo. Tampoco asumir que un clone de dev reproduce el entorno local validado: config.toml habilita seed y apunta a ./seed.sql, pero el archivo falta en GitHub.
+
+## 1. Reglas operativas y de aprendizaje vigentes
+
+1. Hablar en español, explicar decisiones relevantes paso a paso. El usuario quiere aprender, no recibir arquitectura opaca.
+2. Leer AGENTS.md, CLAUDE.md y contexto antes de código. AGENTS.md exige consultar guías de la versión instalada de Next.js en `node_modules/next/dist/docs/` antes de escribir código; CLAUDE.md contiene `@AGENTS.md`.
+3. El usuario realiza personalmente cambios en Supabase. Preparar SQL y explicar pruebas; no ejecutar cambios remotos de esquema, funciones, permisos o datos. Esta transferencia no autorizó ejecución local tampoco.
+4. No hacer db push, db reset --linked, borrar volúmenes, stop --no-backup ni publicar a producción automáticamente. Los resets locales eliminan datos; no ejecutarlos por copiar un comando histórico.
+5. Conservar FormSubmit y /rsvp y /rsvp/gracias durante transición; decidir corte tras validación, evitando doble envío.
+6. Privileged key solo en servidor; jamás NEXT_PUBLIC_, componentes cliente, logs, Git, exportaciones o handoff.
+7. No guardar datos reales de invitados ni tokens reales. Los tokens locales de este documento son fixtures públicos deliberadamente predecibles.
+8. No añadir policies permisivas para resolver errores. Permisos de objeto, RLS y autorización de negocio son capas distintas. Una credencial privilegiada exige validar explícitamente cada invitación y boda.
+9. Verificar branch, git status y diff en la copia correcta. Ruta local reportada: `/Users/chezko/Desktop/VS Code/web-bodas-with-rsvpform`; no confundir con la carpeta de este chat.
+10. No reescribir automáticamente migraciones ya aplicadas/compartidas. La vieja práctica de editar initial_schema era previa al despliegue remoto; verificar historial y estabilidad antes de cualquier decisión.
+
+## 2. Estado del esquema comprobado en el archivo inicial
+
+El SQL real define:
+- Enums public.rsvp_status: accepted/declined; public.sync_status: pending/processing/synced/failed.
+- weddings: UUID, slug único/no vacío, pareja, event_date/rsvp_deadline timestamptz, timezone por defecto America/Mexico_City, is_active, timestamps; cierre anterior al evento.
+- wedding_admins: FK boda y auth.users, membership único, owner/admin/viewer; índice user_id.
+- invitations: FK boda, household_name no vacío, contactos opcionales, access_token_hash único, max_guests entre 1 y 20, is_active, notes, timestamps; índice wedding_id.
+- rsvps: FK invitation_id único, status, version >=1, message, submitted_at y updated_at. Pendiente = ausencia de fila; no valor pending en rsvp_status.
+- guests: FK RSVP, full_name recortado no vacío y <=120, timestamps; índice rsvp_id.
+- private.sheet_sync_jobs: FK RSVP, rsvp_version >=1, sync status, attempts >=0, tiempos/reintentos/lock/error; UNIQUE(rsvp_id,rsvp_version), índice parcial status/next_attempt_at para pending/failed.
+- FKs anteriores con ON DELETE CASCADE. Preferir desactivación de invitaciones en flujo normal; no interpretar cascade como autorización para borrar.
+- private.set_updated_at(): SECURITY INVOKER, search_path vacío; BEFORE UPDATE en weddings/invitations/rsvps/guests; EXECUTE revocado de PUBLIC.
+- RLS habilitado en las seis tablas; ninguna CREATE POLICY en el archivo inspeccionado.
+- REVOKE ALL en las cinco tablas public para anon/authenticated.
+- Defaults antiguos dentro de initial_schema: revoca SELECT/INSERT/UPDATE/DELETE en tablas public y EXECUTE en funciones public para PUBLIC. La segunda migración local amplía/endurece este punto.
+
+Las restricciones de cupo, accepted con al menos uno, declined sin asistentes, cierre, aislamiento de familia, incremento de versión y encolado NO están implementadas por tener las tablas. Deben vivir en la operación autorizada y transaccional. El trigger solo actualiza updated_at: no incrementa version automáticamente.
+
+## 3. Seguridad local: evidencia exacta y límites
+
+Resultado que pegó el usuario:
+
+```text
+npx supabase migration list --local
+Connecting to local database...
+
+  
+   Local            | Remote           | Time (UTC)            
+  ------------------|------------------|-----------------------
+   `20261002023537` | `20261002023537` | `2026-10-02 02:35:37` 
+   `20261011092114` | `20261011092114` | `2026-10-11 09:21:14` 
+
+| tablename      | rls_enabled | role_name     | can_select | can_insert | can_update | can_delete |
+| -------------- | ----------- | ------------- | ---------- | ---------- | ---------- | ---------- |
+| guests         | true        | anon          | false      | false      | false      | false      |
+| guests         | true        | authenticated | false      | false      | false      | false      |
+| invitations    | true        | anon          | false      | false      | false      | false      |
+| invitations    | true        | authenticated | false      | false      | false      | false      |
+| rsvps          | true        | anon          | false      | false      | false      | false      |
+| rsvps          | true        | authenticated | false      | false      | false      | false      |
+| wedding_admins | true        | anon          | false      | false      | false      | false      |
+| wedding_admins | true        | authenticated | false      | false      | false      | false      |
+| weddings       | true        | anon          | false      | false      | false      | false      |
+| weddings       | true        | authenticated | false      | false      | false      | false      |
+
+npx supabase db advisors
+Connecting to local database...
+No issues found
+```
+
+`migration list --local` compara archivos e historial de la **base local** aunque la columna se llame Remote. NO demuestra aplicación en Supabase Cloud. No issues found solo corresponde a esa ejecución de Advisors, no garantiza endpoint seguro, protección contra abuso o pruebas de negocio.
+
+SQL de segunda migración compartido por el usuario (normalizado para quitar escapes del chat; no leído en GitHub):
+
+```sql
+alter default privileges for role postgres
+in schema public
+revoke all privileges on tables from anon, authenticated;
+
+alter default privileges for role postgres
+revoke execute on functions from public;
+
+alter default privileges for role postgres
+in schema public
+revoke execute on functions from anon, authenticated;
+```
+
+El REVOKE de EXECUTE a PUBLIC a nivel del rol (sin IN SCHEMA) elimina el permiso global predeterminado. Estos defaults afectan futuros objetos creados por postgres; no todos los propietarios ni objetos existentes retroactivamente.
+
+Prueba local compartida: BEGIN, crea public._permissions_probe(id integer) y public._permissions_probe_fn() SECURITY INVOKER SET search_path = '' que retorna 1; consulta has_table_privilege SELECT/INSERT/TRUNCATE y has_function_privilege EXECUTE; termina con ROLLBACK. No dejar los objetos de prueba.
+
+| Rol | SELECT | INSERT | TRUNCATE | EXECUTE |
+| --- | --- | --- | --- | --- |
+| anon | false | false | false | false |
+| authenticated | false | false | false | false |
+| service_role | true | true | true | true |
+
+Ese resultado prueba esos objetos nuevos y ese creador; no sustituye la prueba de tablas existentes. El usuario también aportó la salida de diez filas de tablas reales arriba. No hay nueva prueba de service_role sobre las seis tablas ni acceso operativo a private.sheet_sync_jobs en esta transferencia.
+
+## 4. Seed local acordado y reportado como funcionando
+
+Propuesta del chat: insertar boda `boda-demo-local`, pareja ficticia **Alex y Sam**, evento **2027-12-20 18:00:00-06**, cierre **2027-12-01 23:59:59-06**. No son fechas de Cecilia y Edgard.
+
+| Invitación ficticia | Token SOLO local | Pases | Estado inicial |
+| --- | --- | ---: | --- |
+| Familia García | local-test-garcia | 4 | pending |
+| Ana López | local-test-ana | 1 | pending |
+| Familia Pérez | local-test-perez | 2 | pending |
+
+Hash propuesto: `encode(sha256(convert_to(v.test_token, 'UTF8')), 'hex')`.
+Tres invitaciones, siete pases asignados, sin filas en rsvps inicialmente.
+Config GitHub verificada: [db.seed], enabled = true, sql_paths = ["./seed.sql"].
+El usuario respondió «Todo ha funcionado correctamente» después del paso de reset y consulta; no pegó la salida de las tres filas. Documentar éxito reportado, sin inventar salida ejecutada o UUIDs.
+El seed propuesto usa INSERT simples, no ON CONFLICT: no asumir que repetirlo sobre una base poblada sea idempotente.
+
+Reconstrucción de referencia del seed propuesto (NO ejecutarlo automáticamente):
+
+```sql
+insert into public.weddings (slug, couple_names, event_date, rsvp_deadline)
+values ('boda-demo-local', 'Alex y Sam',
+        '2027-12-20 18:00:00-06', '2027-12-01 23:59:59-06');
+
+insert into public.invitations
+  (wedding_id, household_name, access_token_hash, max_guests)
+select w.id, v.household_name,
+       encode(sha256(convert_to(v.test_token, 'UTF8')), 'hex'), v.max_guests
+from public.weddings w
+cross join (values
+  ('Familia García', 'local-test-garcia', 4),
+  ('Ana López', 'local-test-ana', 1),
+  ('Familia Pérez', 'local-test-perez', 2)
+) as v(household_name, test_token, max_guests)
+where w.slug = 'boda-demo-local';
+```
+
+## 5. Estructuras: GitHub y copia local son diferentes
+
+### Archivos versionados verificados en GitHub dev
+
+```text
+.gitignore
+AGENTS.md
+CLAUDE.md
+CODEX_HANDOFF.md
+README.md
+docs/CONTEXTO_PROYECTO.md
+eslint.config.mjs
+next.config.ts
+package-lock.json
+package.json
+postcss.config.mjs
+public/file.svg
+public/globe.svg
+public/next.svg
+public/vercel.svg
+public/window.svg
+src/app/contacto/page.tsx
+src/app/detalles/page.tsx
+src/app/favicon.ico
+src/app/galeria/page.tsx
+src/app/globals.css
+src/app/historia/page.tsx
+src/app/hospedaje/page.tsx
+src/app/layout.tsx
+src/app/page.tsx
+src/app/regalos/page.tsx
+src/app/rsvp/gracias/page.tsx
+src/app/rsvp/page.tsx
+src/components/ContactForm.tsx
+src/components/Footer.tsx
+src/components/Header.tsx
+src/components/Hero.tsx
+src/components/MapEmbed.tsx
+src/components/RsvpForm.tsx
+src/components/Section.tsx
+supabase/.gitignore
+supabase/config.toml
+supabase/migrations/20261002023537_initial_schema.sql
+supabase/snippets/Untitled query 499.sql
+tailwind.config.js
+tsconfig.json
+```
+
+Git no registra directorios vacíos. No hay API RSVP, /rsvp/[token] ni src/lib/supabase/admin.ts en este árbol.
+
+### Estructura local compartida por el usuario (fuente reportada, no inspección del disco)
+
+me gusta como validaremos, igual antes de seguir te paso como esta la estructura del proyecto para que la guardes en tu memoria:
+
+**# Estructura del proyecto**
+
+\`\`\`text
+.
+├── AGENTS.md
+├── CLAUDE.md
+├── CODEX_HANDOFF.md
+├── ESTRUCTURA.md
+├── README.md
+├── docs
+│   └── CONTEXTO_PROYECTO.md
+├── eslint.config.mjs
+├── next-env.d.ts
+├── next.config.ts
+├── package-lock.json
+├── package.json
+├── postcss.config.mjs
+├── public
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── next.svg
+│   ├── vercel.svg
+│   └── window\.svg
+├── src
+│   ├── app
+│   │   ├── contacto
+│   │   │   └── page.tsx
+│   │   ├── detalles
+│   │   │   └── page.tsx
+│   │   ├── favicon.ico
+│   │   ├── galeria
+│   │   │   └── page.tsx
+│   │   ├── galeria-instagram
+│   │   ├── globals.css
+│   │   ├── historia
+│   │   │   └── page.tsx
+│   │   ├── hospedaje
+│   │   │   └── page.tsx
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   ├── regalos
+│   │   │   └── page.tsx
+│   │   └── rsvp
+│   │       ├── gracias
+│   │       │   └── page.tsx
+│   │       └── page.tsx
+│   ├── components
+│   │   ├── ContactForm.tsx
+│   │   ├── Footer.tsx
+│   │   ├── Header.tsx
+│   │   ├── Hero.tsx
+│   │   ├── MapEmbed.tsx
+│   │   ├── RsvpForm.tsx
+│   │   ├── Section.tsx
+│   │   └── ui
+│   ├── hooks
+│   ├── lib
+│   └── utils
+├── supabase
+│   ├── config.toml
+│   ├── migrations
+│   │   ├── 20261002023537_initial_schema.sql
+│   │   └── 20261011092114_harden_default_privileges.sql
+│   ├── seed.sql
+│   └── snippets
+│       ├── Untitled query 414.sql
+│       ├── Untitled query 499.sql
+│       └── verify_default_privileges.sql
+├── tailwind.config.js
+└── tsconfig.json
+
+22 directories, 45 files
+\`\`\`
+
+No afirmar que ESTRUCTURA.md fue actualizado o leído: solo se conoce su nombre en esta lista.
+next-env.d.ts puede ser generado y no versionado. La carpeta galeria-instagram vacía no demuestra una ruta funcional.
+
+Stack package.json verificado: Next ^16.3.8, React/React DOM 19.2.8, TypeScript ^5; Tailwind ^3.4.19 con @tailwindcss/postcss ^4. No resolver esa combinación en este trabajo documental. Scripts dev/build/start/lint. @supabase/supabase-js no declarado. Versiones instaladas exactas deben revisarse en lockfile/entorno antes de implementar.
+RsvpForm.tsx verificado contiene fetch a formsubmit.co. El README sigue siendo mayormente plantilla y enlaza al contexto; su ejemplo app/page.tsx no reemplaza la estructura real src/app.
+
+## 6. Próximo trabajo: Etapa 4, lectura segura por token (PENDIENTE)
+
+Primero reconciliar archivos locales recientes sin sobrescribir cambios. Explicar discrepancia, revisar git status/diff y contenido local de segunda migración/seed/snippet/ESTRUCTURA.md. Versionarlos corresponde a un trabajo posterior autorizado; no se hizo en esta transferencia.
+
+Después, si se pide continuar implementación:
+1. Consultar guías Next instaladas por AGENTS.md; comprobar SDK con npm ls @supabase/supabase-js. Instalar solo si falta, conservar lockfile.
+2. Obtener configuración local con supabase status sin compartir claves en chat.
+3. Variables privadas propuestas en .env.local: SUPABASE_URL=http://127.0.0.1:54321 y SUPABASE_SECRET_KEY=<clave local privada>. Compatibilidad legacy service_role solo si es la clave disponible. Nombres propuestos, todavía no configuración comprobada.
+4. Cliente servidor `src/lib/supabase/admin.ts`, exclusivo de servidor, sin exportación a cliente.
+5. Lectura `src/app/api/rsvp/[token]/route.ts`; página futura `src/app/rsvp/[token]/page.tsx`. Mantener rutas actuales.
+6. Recibir token opaco, SHA-256 UTF-8 hex consistente con seed; buscar hash único; validar invitación y boda activas; evaluar plazo con reloj de servidor.
+7. Respuesta con datos mínimos para el formulario (invitación, cupo, datos públicos necesarios de boda y estado de cierre; respuesta previa solo de esa invitación si se decide incorporarla). No devolver hash, notes administrativas, contactos ajenos, listas de familias o jobs.
+8. Definir contrato concreto de errores/JSON, tratamiento del enlace vencido (mostrar cierre frente a rechazar lectura), caché y logs antes de cerrar implementación. No hay códigos HTTP o contrato final acordados.
+9. Evitar caché compartida de datos privados; no registrar token/URL secreta; controles de abuso antes de publicación. No tratar RLS como autorización suficiente cuando se usa credencial privilegiada.
+10. Solo lectura en esta primera etapa. POST transaccional después; integración visual después de probar cada capa.
+
+### Pruebas de aceptación de lectura
+
+- Fixtures García/4, Ana/1, Pérez/2: cada token devuelve solo su invitación.
+- Token inexistente/malformado: error controlado, sin datos ni detalles de BD.
+- Invitación inactiva o token rotado: no acceso.
+- Boda inactiva: no acceso.
+- Deadline vencido y frontera exacta: comportamiento definido y consistente; reloj del navegador no autoriza.
+- No secretos/hash/notas en JSON, bundle cliente o logs; no filtración por caché entre familias.
+- No escritura accidental, no afectación de FormSubmit.
+- Errores de conexión manejados; validar build/lint y flujo real local cuando haya código. Esta transferencia documental no los ejecutó.
+
+## 7. Etapas posteriores y criterios pendientes
+
+**Escritura transaccional:** acordar mecanismo Next backend + operación PostgreSQL/RPC o conexión capaz de transacción; no simular atomicidad con varias llamadas independientes supabase-js. Validar token/actividad/plazo/status/nombres/cupo; accepted entre 1 y max_guests, declined cero; preservar submitted_at; incrementar version en edición; reemplazar guests y encolar job de misma versión en UNA transacción. Rollback completo. Definir locks/control de concurrencia e idempotencia; UNIQUE(invitation_id) solo no resuelve carreras de edición.
+
+**Pruebas de escritura:** primera respuesta, edición, rechazo, cambios accepted↔declined, cupo parcial/excedido, vacío y >120 caracteres, plazo, token inválido, concurrencia/doble envío, rollback y jobs únicos/versiones consistentes. No se hicieron todavía.
+
+**Sheets:** fuera de respuesta HTTP, fuente Supabase, proyección unidireccional, identificador estable invitation UUID; reintentos/backoff/locks, jobs obsoletos no pisan versión nueva, exportar CSV/Excel. Tabla jobs no implica worker construido.
+
+**Dashboard:** Supabase Auth + wedding_admins por boda; métricas, nombres, búsqueda, pases, pendientes/accepted/declined y exportación. Roles owner/admin/viewer deben recibir autorización diseñada, no policy genérica authenticated USING(true).
+
+**UI y contenido:** mantener objetivos originales de vidrio translúcido, pocas animaciones, navegación accesible, idioma ES/EN global persistente, contenido desde código inicialmente y plantilla futura. 100 pases es referencia de pruebas, no límite fijo. El CHECK actual max_guests 1..20 es por invitación.
+Fechas históricas: sitio decía 10 abril 2027/recepción 19:00 Mazatlán; cierre 20 febrero 2027 provisional. No adoptar ejemplo 6 marzo. Hora/zona del cierre y zona IANA de evento aún requieren confirmación; America/Mexico_City de sesión/default no confirma zona de Mazatlán.
+
+## 8. Incidente Storage: conservar historia sin tratarlo como bloqueo vigente
+
+Handoff anterior terminaba con `supabase_storage_web-bodas-with-rsvpform container is not ready: unhealthy` durante db reset. No se atribuyó a SQL y se propuso stop/start, status, docker ps/logs/inspect. No se documentó la causa raíz ni el comando que lo resolvió.
+Luego el usuario aportó migraciones locales aplicadas, RLS/permisos esperados, Advisors sin hallazgos y éxito del seed. Por continuidad, el bloqueo no es el siguiente objetivo.
+Si reaparece, leer salud/logs primero; no cambiar schema por un fallo de servicio, borrar volúmenes o usar stop --no-backup por defecto.
+
+## 9. Comprobaciones al retomar (no ejecutadas en esta transferencia)
+
+- Confirmar dev y git status/diff de la copia local; comparar con origen sin sobrescribir archivos.
+- Leer seis documentos solicitados; si ESTRUCTURA.md no está disponible, decirlo.
+- Comparar ambas migraciones y seed; comprobar no datos reales ni secretos antes de versionar.
+- Comprobar versión CLI y --help antes de comandos; la CLI 2.119.0 es dato histórico del handoff, no versión actual comprobada.
+- Comprobar stack local/status y migration list --local (lecturas). No reset automático.
+- Validar tablas y seed con consultas de solo lectura; consultar pg_policies si se desea comprobar ausencia actual de policies.
+- Revisar RLS y permisos de las seis tablas, en particular private/jobs y acceso del servidor. Repetir Advisors locales cuando cambie esquema, sin inferir resultado de producción.
+- La prueba _permissions_probe requiere crear objetos aunque termine en rollback: el usuario debe ejecutarla conforme a la restricción de cambios en Supabase.
+- Trigger updated_at necesita prueba funcional controlada por el usuario; definición presente no prueba ejecución.
+- No interpretar revisión documental como auditoría end-to-end. No hubo DB push ni prueba remota.
+
+## 10. Prompt de arranque para un nuevo chat
+
+Copiar este bloque y adjuntar este archivo si el nuevo chat no puede abrir el repositorio:
+
+```text
+Continuemos el proyecto Garcheco/web-bodas-with-rsvpform en la rama dev.
+Lee CODEX_HANDOFF.md completo, incluyendo evidencias y anexos; luego AGENTS.md,
+CLAUDE.md, docs/CONTEXTO_PROYECTO.md, ESTRUCTURA.md si está disponible, README.md
+y las migraciones/seed reales. No asumas acceso al historial de otros chats.
+
+Primero revisa el estado real sin modificar archivos ni bases de datos:
+confirma rama y git status/diff si tienes la copia local; distingue esa copia de GitHub.
+El usuario reportó pruebas locales de migraciones/RLS/permisos/Advisors y seed exitosas,
+pero al preparar el handoff en GitHub faltaban la migración 20261011092114,
+seed.sql, verify_default_privileges.sql y ESTRUCTURA.md.
+Explica cualquier diferencia y no sobrescribas trabajo local ni inventes contenido faltante.
+
+El fallo Storage unhealthy es histórico; solo vuelve a diagnosticarlo si reaparece.
+El próximo objetivo técnico acordado es Etapa 4: lectura segura de invitación
+por token SHA-256 con cliente exclusivo del servidor y endpoint Next.js.
+No se ha implementado aún. Mantén /rsvp, /rsvp/gracias y FormSubmit.
+
+Después del diagnóstico, explícame paso a paso el primer cambio necesario.
+Yo aplicaré personalmente los cambios en Supabase. No hagas db push,
+db reset --linked, cambios remotos, borrado de volúmenes ni publiques automáticamente.
+No expongas claves privilegiadas ni uses tokens ficticios en producción.
+La primera implementación será de solo lectura; escritura transaccional,
+integración visual, Sheets y dashboard son etapas posteriores.
+Si no tienes acceso al repo o a la copia local, pide los archivos concretos que falten
+y marca explícitamente lo que no puedes verificar.
+```
+
+Para ChatGPT: nuevo chat + archivo adjunto o enlace de GitHub con acceso; pegar prompt.
+Para Codex: abrir el repositorio correcto en dev + prompt. No hace falta copiar toda la conversación.
+Actualizar este handoff al cerrar futuras sesiones con archivos cambiados, evidencia, límites y siguiente paso.
+
+---
+
+## Anexo A. Decisiones técnicas detalladas preservadas del handoff anterior
+
+**Lectura con estado actualizado:** el siguiente anexo conserva decisiones y DDL explicativo del handoff anterior, no una segunda fuente de ejecución. Los apartados que decían «se propuso», «conceptualmente», «confirmar» o «se estaba agregando» describen el momento histórico. El estado verificado hoy es el de secciones 0–9.
+En particular: initial_schema sí contiene enums, tablas, helper/triggers, RLS y revokes; defaults endurecidos nuevos están reportados en segunda migración local; Cloud ACTIVE_HEALTHY y CLI 2.119.0 son datos históricos. Las referencias a reescribir initial_schema no autorizan hacerlo hoy. El detalle del dashboard/FormSubmit sigue siendo plan.
 
 ## 1. Objetivo del proyecto
 
@@ -818,167 +1215,6 @@ revisar search_path, schema, auth checks, EXECUTE grants y exposición.
 Mantener helpers privilegiados fuera de schemas expuestos siempre que
 sea posible.
 
-## 20. Error actual --- IMPORTANTE
-
-El último `npx supabase db reset` no terminó normalmente.
-
-Error:
-
-``` text
-supabase_storage_web-bodas-with-rsvpform container is not ready: unhealthy
-```
-
-No se concluyó que fuera un error SQL.
-
-El diagnóstico actual es que el servicio local de Supabase
-Storage/Docker quedó unhealthy durante/tras el reset.
-
-Se indicó NO modificar todavía `initial_schema.sql` debido solamente a
-este error.
-
-### Siguiente diagnóstico acordado
-
-Primero:
-
-``` bash
-npx supabase stop
-npx supabase start
-```
-
-No utilizar todavía:
-
-``` bash
-npx supabase stop --no-backup
-```
-
-Si `start` vuelve a fallar:
-
-``` bash
-docker ps -a --filter "name=supabase_storage"
-```
-
-Después:
-
-``` bash
-docker logs supabase_storage_web-bodas-with-rsvpform --tail 100
-```
-
-Y:
-
-``` bash
-docker inspect \
-  --format='{{json .State.Health}}' \
-  supabase_storage_web-bodas-with-rsvpform
-```
-
-También:
-
-``` bash
-npx supabase status
-```
-
-Objetivo: determinar si Storage es la causa primaria o si
-Database/Auth/REST también están fallando.
-
-NO borrar volumes ni utilizar `--no-backup` antes de revisar logs, salvo
-que el usuario lo autorice y exista una razón concreta.
-
-## 21. Después de resolver Storage
-
-Si el stack vuelve a estar healthy:
-
-``` bash
-npx supabase db reset
-```
-
-Después comprobar RLS:
-
-``` sql
-select
-  schemaname,
-  tablename,
-  rowsecurity
-from pg_tables
-where schemaname in ('public', 'private')
-  and tablename in (
-    'weddings',
-    'wedding_admins',
-    'invitations',
-    'rsvps',
-    'guests',
-    'sheet_sync_jobs'
-  )
-order by schemaname, tablename;
-```
-
-Objetivo esperado:
-
-``` text
-private | sheet_sync_jobs | true
-
-public  | guests          | true
-public  | invitations     | true
-public  | rsvps           | true
-public  | wedding_admins  | true
-public  | weddings        | true
-```
-
-También probar el trigger `updated_at` localmente antes del push.
-
-## 22. Database Advisors
-
-Después de tener:
-
--   reset exitoso;
--   schema validado;
--   RLS confirmado;
--   triggers confirmados;
--   grants revisados;
-
-ejecutar los Database Advisors disponibles en la versión instalada de la
-CLI.
-
-Descubrir primero la sintaxis real con:
-
-``` bash
-npx supabase db --help
-npx supabase db advisors --help
-```
-
-No asumir flags de otra versión de CLI.
-
-Revisar warnings antes de `db push`.
-
-## 23. Seed data
-
-Después del hardening y advisors, crear `supabase/seed.sql`.
-
-No usar todavía información real de invitados.
-
-Crear datos ficticios suficientes para probar escenarios como:
-
-``` text
-Familia García   max_guests=4
-Ana López        max_guests=1
-Familia Pérez    max_guests=2
-```
-
-Probar:
-
--   pending;
--   accepted;
--   declined;
--   edición de RSVP;
--   guest count;
--   max_guests;
--   deadline;
--   invitation inactive;
--   version increment;
--   sync job generation.
-
-No asumir la fecha real de la boda ni el deadline definitivo sin
-confirmación.
-
 ## 24. Dashboard futuro
 
 El dashboard debería permitir eventualmente:
@@ -1021,63 +1257,116 @@ Migración propuesta:
 6. Admin dashboard
 ```
 
-## 26. Reglas para el siguiente agente
 
-Antes de modificar código:
 
-1.  Confirmar branch actual con Git.
-2.  Inspeccionar `supabase/migrations`.
-3.  Leer el `initial_schema.sql` real.
-4.  Compararlo con este documento.
-5.  Revisar `git status`.
-6.  No asumir que los últimos bloques SQL se guardaron debido al fallo
-    de Storage.
-7.  Diagnosticar primero el contenedor unhealthy.
-8.  No hacer `db push` hasta completar hardening/advisors.
-9.  No ejecutar `db reset --linked`.
-10. No exponer service-role/secret keys.
-11. Mantener RLS en toda tabla expuesta.
-12. Explicar cambios relevantes antes de realizarlos cuando el trabajo
-    sea educativo.
-13. Hacer cambios incrementales y verificarlos.
-14. No reemplazar seguridad por policies demasiado permisivas para
-    "hacerlo funcionar".
-15. Supabase sigue siendo source of truth; Google Sheets no lo
-    sustituye.
+## Anexo B. Contexto de producto y planificación preservado (1 octubre 2026)
 
-## 27. Primer prompt recomendado para Codex
+Documento histórico copiado para conservar decisiones, tareas y límites. Su frase «no se implementaron las sesiones» no niega avances locales reportados el 11 de octubre. Fechas de sesiones y estado TickTick no se revalidaron ni modificaron en esta transferencia. No crear ni reprogramar tareas por leerlo.
 
-Usar algo equivalente a:
+# Proyecto-Web Edgard — contexto para retomar en VS Code
 
-``` text
-Lee CODEX_HANDOFF.md completo antes de realizar cambios.
+Actualizado: 1 de octubre de 2026. Este documento resume decisiones del usuario y propuestas pendientes; no acredita que las funciones estén implementadas.
 
-Este archivo contiene las decisiones técnicas y el estado de una sesión anterior.
-El repositorio real es la fuente definitiva, así que primero:
+## Cómo retomar
 
-1. confirma la branch actual;
-2. revisa git status;
-3. inspecciona supabase/migrations y el initial_schema.sql;
-4. compara el estado real con CODEX_HANDOFF.md;
-5. no modifiques archivos todavía.
+Abrir este repositorio en VS Code y pedir: «Lee docs/CONTEXTO_PROYECTO.md, revisa el estado actual de la rama y del código, y retomemos la sesión correspondiente. Explícame los cambios paso a paso. Yo aplicaré los cambios en Supabase».
 
-El problema inmediato es:
+El historial de otros chats no se debe dar por disponible automáticamente. Mantener este documento actualizado al terminar cada sesión con cambios, comprobaciones, pendientes y siguiente paso. No guardar contraseñas, claves, tokens de invitación ni datos reales de invitados aquí. Versionar este archivo en Git permite conservarlo junto al código.
 
-supabase_storage_web-bodas-with-rsvpform container is not ready: unhealthy
+## Objetivo y decisiones del usuario
 
-Ayúdame primero a diagnosticar ese fallo usando el estado real del entorno y los
-logs de Docker. No hagas db push ni db reset --linked.
+- Sitio de boda de Cecilia y Edgard; primero esta boda, después plantilla reutilizable.
+- Prioridad: interacciones sencillas, navegación siempre accesible y estilo de vidrio translúcido inspirado en liquid glass; pocas animaciones.
+- Contenido editado desde código inicialmente. Panel de los novios para textos, fotos e invitados en una fase posterior.
+- Español por defecto y botón global ES/EN que recuerde la elección.
+- Invitaciones privadas por familia/persona con pases asignados; los invitados escriben sus nombres y los de acompañantes.
+- 100 invitados/pases como referencia de pruebas, sin lista real todavía y sin convertirlo en límite fijo del sistema.
+- Respuesta editable hasta un cierre configurable. Referencia provisional: 20 de febrero de 2027; hora y zona de cierre pendientes de confirmar.
+- El sitio actual indica boda el 10 de abril de 2027, recepción a las 19:00 en Mazatlán. Un ejemplo del otro chat usa 6 de marzo: no adoptar esa fecha sin confirmación. La zona de las sesiones (America/Mexico_City) no implica que deba ser la del evento; confirmar la zona de Mazatlán al implementar fechas.
+- Supabase será la fuente principal. Google Sheets en Drive será una copia para seguimiento, con exportación CSV/Excel; inicialmente sin edición bidireccional.
+- El usuario quiere aprender: explicar tablas, relaciones, SQL, permisos y pruebas antes de aplicar cambios.
+- Instrucción vigente: el usuario hará personalmente los cambios en Supabase. El asistente puede preparar diseño, SQL y código local, pero no ejecutar cambios remotos de esquema, funciones, permisos o datos.
 
-Este proyecto es educativo. Explícame la causa y las decisiones relevantes a
-medida que avancemos.
-```
+## Estado conocido y límites de verificación
 
-------------------------------------------------------------------------
+- Repositorio: web-bodas-with-rsvpform. Rama observada: dev. Next.js, React, TypeScript y Tailwind.
+- Sitio: https://web-bodas-with-rsvpform.vercel.app
+- Se comprobó HTTP 200 de la portada; eso no valida visualmente el sitio ni la entrega del formulario.
+- La revisión inicial encontró nombre vacío permitido en RSVP, exigencia de invitados aun al rechazar, idioma separado por componente, enlace inexistente a /galeria-instagram y contenido provisional/inconsistente.
+- El lint inicial dio 0 errores y 2 advertencias; volver a verificar contra el código actual cuando haya cambios.
+- Durante este hilo se hizo revisión y planificación; no se implementaron las sesiones. No marcar tareas como hechas por estar planificadas.
+- Según el chat compartido, Supabase ya tiene el proyecto Boda Edgard, referencia xbfrwgclwrlzjcxepzbf, región us-west-1. Su estado actual y tablas NO se han verificado desde este hilo. El chat decía que aún no había tablas.
+- Fuente de diseño: https://chatgpt.com/share/6abe8ad4-5f6c-83e8-9398-cb7a8fa8a6da
 
-## Estado resumido en una línea
+## Arquitectura propuesta para revisar, aún no aplicada
 
-**El schema inicial del nuevo RSVP está prácticamente modelado
-localmente, pero antes de validarlo, ejecutar advisors o enviarlo al
-Supabase remoto hay que resolver el contenedor local
-`supabase_storage_web-bodas-with-rsvpform` que quedó `unhealthy` durante
-`db reset`.**
+Flujo: enlace privado → formulario → validación del servidor → guardado transaccional en Supabase → trabajo de sincronización → Google Sheets.
+
+| Tabla | Responsabilidad |
+| --- | --- |
+| weddings | Configuración de boda, fecha, zona y cierre de RSVP |
+| wedding_admins | Usuarios autorizados y rol por boda, para el futuro panel |
+| invitations | Familia/persona, contacto, hash de token, cupo y estado activo |
+| rsvps | Una respuesta actual por invitación, accepted o declined; ausencia de respuesta significa pendiente |
+| guests | Personas que asistirán, vinculadas al RSVP |
+| sheet_sync_jobs | Trabajos pendientes, en proceso, sincronizados o fallidos; intentos y errores |
+
+Relaciones propuestas: boda 1:N invitaciones; invitación 1:0..1 RSVP; RSVP 1:N asistentes y trabajos de sincronización. Wedding_admins relaciona usuarios con bodas.
+
+- Tokens aleatorios de alta entropía; almacenar su hash, sin exponerlos en registros o exportaciones. Definir revocación y regeneración al diseñar.
+- UNIQUE en invitation_id del RSVP para evitar múltiples respuestas actuales. Definir FK, CHECK, índices y comportamiento de borrado explícitamente; preferir desactivación de invitaciones cuando convenga.
+- Guardar RSVP, asistentes y trabajo de sincronización en una transacción. Validar token, estado, plazo, nombres y cupos; rechazo implica cero asistentes. Revisar concurrencia y rollback, no solo doble clic.
+- Activar RLS en tablas expuestas y definir privilegios mínimos. Autenticación sola no autoriza acceso a todas las bodas.
+- Pendiente resolver y documentar ruta exacta: backend Next.js y RPC frente a RPC pública. Propuesta de trabajo para S04: backend Next.js con operación transaccional y permisos mínimos. No asumir que una función puede saltarse RLS ni usar privilegios elevados sin diseño explícito.
+- La fecha del navegador sirve para interfaz; el servidor debe imponer el cierre.
+- La sincronización con Sheets es independiente del éxito del RSVP. Definir reintentos, idempotencia y protección frente a actualizaciones fuera de orden. Hoja de resumen por invitación; personas normalizadas en Supabase.
+- Mantener FormSubmit durante la transición hasta verificar el nuevo flujo; decidir el corte para evitar envíos duplicados.
+
+## Plan y seguimiento en TickTick
+
+Lista: 🎉Boda-Edgard. ID: 6a8fd4c58f0804d7210597da. Las tareas están creadas en la columna New; no se han marcado completas.
+
+Sesiones de unas 2 horas, zona America/Mexico_City:
+
+| Sesión | Fecha acordada | Alcance |
+| --- | --- | --- |
+| S01 | 30 septiembre 2026, sin hora fija | Configuración central y correcciones actuales |
+| S02 | 1 octubre, 20:00–22:00 | Navegación persistente y móvil |
+| S03 | 2 octubre, 20:00–22:00 | Idioma global y contenido |
+| S04 | 3 octubre, 20:00–22:00 | Diseñar y entender modelo de datos y permisos |
+| S05 | 4 octubre, 20:00–22:00 | Integrar RSVP con el contrato y validar flujo |
+
+Limitación observada: el complemento guardó inicio y fin de S02–S05 a las 22:00 pese a enviar 20:00–22:00. El horario correcto figura en las descripciones; revisar manualmente la representación en calendario si se necesitan bloques de duración. No desplazar fechas sin acuerdo.
+
+### S04 — Diseño y aprendizaje (120 minutos)
+
+1. 15 min: revisar contexto, proyecto existente y fechas/zona con el usuario.
+2. 30 min: dibujar y explicar seis tablas, relaciones, PK, FK, UNIQUE y CHECK.
+3. 25 min: revisar hash de token, permisos por boda, RLS y ruta backend/RPC.
+4. 30 min: preparar SQL comentado y contrato de lectura/guardado; explicar transacción, cupos, cierre, rechazo y doble envío. No ejecutar SQL.
+5. 20 min: revisar juntos y guardar decisiones, SQL propuesto y dudas.
+
+Cierre: diagrama y borrador SQL revisables, contrato documentado y preguntas explícitas. La aplicación en Supabase corresponde al usuario.
+
+### S05 — Integración y pruebas (120 minutos)
+
+1. 15 min: revisar configuración aplicada por el usuario y contrato S04. Si falta, usar adaptador simulado y registrar dependencia.
+2. 25 min: cargar invitación privada, pases y respuesta previa; manejar enlaces inválidos e invitaciones inactivas.
+3. 35 min: conectar guardado/edición transaccional, validar cupo/plazo/nombres, rechazo con cero asistentes y trabajo de sincronización.
+4. 30 min: probar parcial, exceso de cupo, concurrencia, edición, rechazo, token inválido, vencimiento, rollback y ausencia de duplicados.
+5. 15 min: guardar evidencia y pendientes. Explicar qué está simulado y qué se verificó contra Supabase.
+
+Cierre ideal: confirmación y modificación persistidas correctamente. Sin BD lista, entregar integración simulada sin afirmar persistencia verificada ni dar por terminadas pruebas reales. Conservar tiempo de pruebas si hay que trasladar trabajo a otra sesión.
+
+### Trabajo posterior sin fecha
+
+- S06: Google Sheets, sincronización y exportación.
+- S07: recuperación, reintentos y comprobaciones ante fallas.
+- S08: panel privado para los novios y gestión de invitados.
+- S09: edición de contenido y plantilla reutilizable.
+
+## Registro para futuras sesiones
+
+- Hecho en este turno: actualización de S04/S05 en TickTick y documentación de continuidad.
+- Pendiente: comenzar implementación de sesiones; diseño SQL completo; decisiones de seguridad y fechas; aplicación en Supabase por el usuario.
+- Al retomar: leer este documento y revisar git status/diff y código real. Confirmar qué implementó el usuario desde la última sesión; no asumir que el estado descrito sigue vigente.
